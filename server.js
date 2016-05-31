@@ -11,5 +11,5 @@ io.on('connection', function() {
 });
 
 http.listen(PORT, function() {
-  console.log('Server started on port ' + PORT + '...');
+  console.log('Socket.io server started on port ' + PORT + '...');
 });
