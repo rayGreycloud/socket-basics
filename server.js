@@ -9,9 +9,35 @@ app.use(express.static(__dirname + '/public'));
 
 var clientInfo = {};
 
+// function to display current users
+function sendCurrentUsers(socket) {
+  var info = clientInfo[socket.id];
+  var users = [];
+
+  if (typeof info === 'undefined') {
+    return;
+  }
+
+  Object.keys(clientInfo).forEach(function(socketId) {
+    var userInfo = clientInfo[socketId];
+
+    if (info.room === userInfo.room) {
+      users.push(userInfo.name);
+    }
+  });
+
+  socket.emit('message', {
+    name: 'System',
+    text: 'Current users: ' + users.join(', '),
+    timestamp: moment().valueOf()
+  });
+}
+
+// user connect event handler
 io.on('connection', function(socket) {
   console.log('User connected via socket.io');
 
+  // user disconnect event handler
   socket.on('disconnect', function() {
     var userData = clientInfo[socket.id];
 
@@ -26,6 +52,7 @@ io.on('connection', function(socket) {
     }
   });
 
+  // user join event handler
   socket.on('joinRoom', function(req) {
     clientInfo[socket.id] = req;
     socket.join(req.room);
@@ -36,13 +63,19 @@ io.on('connection', function(socket) {
     });
   });
 
+  // message event handler
   socket.on('message', function(message) {
     console.log('Message received: ' + message.text);
 
-    message.timestamp = moment().valueOf();
-    io.to(clientInfo[socket.id].room).emit('message', message);
+    if (message.text === '@currentUsers') {
+      sendCurrentUsers(socket);
+    } else {
+      message.timestamp = moment().valueOf();
+      io.to(clientInfo[socket.id].room).emit('message', message);
+    }
   });
 
+  // system welcome event
   socket.emit('message', {
     name: 'System',
     text: 'Welcome to the Chat App!',
@@ -50,6 +83,7 @@ io.on('connection', function(socket) {
   });
 });
 
+// start server
 http.listen(PORT, function() {
   console.log('Socket.io server started on port ' + PORT + '...');
 });
